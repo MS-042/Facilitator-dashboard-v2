@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Facilitator Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Facilitator Dashboard</h1>
+      <ol>
+        <li>
+          Add in a nominated favourites features (PD1 = gold, PD2-5 = silver)
+        </li>
+        <li>PD = qualified, no strong preference</li>
+        <li>
+          Set table order by satisfaction score, add new facilitators to the top
+        </li>
+        <li>Add in accreditation column, visible in all categories</li>
+        <li>Add in notes column (misc text field)</li>
+        <li>Add in record editor mode for CRUD commands</li>
+      </ol>
+
+      <!-- Toggle -->
+      <button id="btnF2F" class="toggle-btn active">F2F</button>
+      <button id="btnVirtual" class="toggle-btn">Virtual</button>
+
+      <br /><br />
+
+      <!-- Course Dropdown -->
+      <label>Select Course:</label><br />
+      <select id="courseDropdown"></select
+      ><br />
+
+      <!-- Location Dropdown (F2F only) -->
+      <div id="locationContainer">
+        <label>Select Location:</label><br />
+        <select id="locationDropdown"></select
+        ><br />
+      </div>
+
+      <!-- File upload -->
+      <label>Upload Facilitator CSV Export:</label>
+      <input type="file" id="csvFile" accept=".csv" />
+
+      <br /><br />
+
+      <button id="showBtn" disabled>Show List</button>
+
+      <!-- Results table -->
+      <div id="results"></div>
+
+      <script>
+        // -----------------
+        // GLOBAL VARIABLES
+        // -----------------
+        let data = [];
+        let mode = 'F2F'; // default
+
+        // -----------------
+        // READ CSV
+        // -----------------
+        document
+          .getElementById('csvFile')
+          .addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+              const lines = evt.target.result
+                .split('\n')
+                .map((l) => l.split(','));
+              const headers = lines.shift();
+              data = lines.map((row) => {
+                let obj = {};
+                headers.forEach(
+                  (h, i) => (obj[h.trim()] = row[i] ? row[i].trim() : '')
+                );
+                return obj;
+              });
+              populateDropdowns();
+              document.getElementById('showBtn').disabled = false;
+            };
+            reader.readAsText(file);
+          });
+
+        // -----------------
+        // POPULATE DROPDOWNS
+        // -----------------
+        function populateDropdowns() {
+          const courseDropdown = document.getElementById('courseDropdown');
+          const locationDropdown = document.getElementById('locationDropdown');
+
+          courseDropdown.innerHTML = '';
+          locationDropdown.innerHTML = '';
+
+          const courses = new Set();
+          const locations = new Set();
+
+          data.forEach((row) => {
+            const course = row['Course'];
+            const state = row['State'];
+
+            if (mode === 'Virtual' && row['Delivery'] === 'Virtual') {
+              courses.add(course);
+            }
+
+            if (mode === 'F2F' && row['Delivery'] === 'F2F') {
+              courses.add(course);
+              locations.add(state);
+            }
+          });
+
+          [...courses].sort().forEach((c) => {
+            const opt = document.createElement('option');
+            opt.value = opt.textContent = c;
+            courseDropdown.appendChild(opt);
+          });
+
+          if (mode === 'F2F') {
+            [...locations].sort().forEach((l) => {
+              const opt = document.createElement('option');
+              opt.value = opt.textContent = l;
+              locationDropdown.appendChild(opt);
+            });
+          }
+        }
+
+        // -----------------
+        // TOGGLE BEHAVIOUR
+        // -----------------
+        document.getElementById('btnF2F').onclick = function () {
+          mode = 'F2F';
+          this.classList.add('active');
+          document.getElementById('btnVirtual').classList.remove('active');
+          document
+            .getElementById('locationContainer')
+            .classList.remove('hidden');
+          populateDropdowns();
+        };
+
+        document.getElementById('btnVirtual').onclick = function () {
+          mode = 'Virtual';
+          this.classList.add('active');
+          document.getElementById('btnF2F').classList.remove('active');
+          document.getElementById('locationContainer').classList.add('hidden');
+          populateDropdowns();
+        };
+
+        // -----------------
+        // SHOW RESULTS
+        // -----------------
+        document.getElementById('showBtn').onclick = function () {
+          const course = document.getElementById('courseDropdown').value;
+          const location = document.getElementById('locationDropdown').value;
+
+          let results = data.filter(
+            (row) =>
+              row['Course'] === course &&
+              row['Delivery'] === mode &&
+              (mode === 'Virtual' || row['State'] === location) &&
+              [
+                'Yes',
+                'Q',
+                'PD',
+                'PD(1)',
+                'PD(2)',
+                'PD(3)',
+                'PD(4)',
+                'PD(5)',
+              ].includes(row['Qualified'])
+          );
+
+          let html = `
+        <table>
+            <tr>
+                <th>Facilitator</th>
+                <th>Their location</th>
+                <th>Satisfaction</th>
+            </tr>
+    `;
+
+          results.forEach((row) => {
+            html += `
+            <tr>
+                <td>${row['First']} ${row['Last']}</td>
+                <td>${row['City']}</td>
+                <td>${row['Satisfaction']}</td>
+            </tr>
+        `;
+          });
+
+          html += '</table>';
+
+          document.getElementById('results').innerHTML = html;
+        };
+      </script>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Facilitator Dashboard (Supabase)</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --text: #e8eefc;
+        --muted: #95a3c7;
+        --line: rgba(255, 255, 255, 0.12);
+        --card: rgba(255, 255, 255, 0.05);
+        --shadow: 0 14px 38px rgba(0, 0, 0, 0.35);
+        --radius: 14px;
+        --btn: #2a3b6a;
+        --btnActive: #3f5bd9;
+        --danger: #d9534f;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          'Liberation Mono', 'Courier New', monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(
+            1200px 700px at 20% 0%,
+            #182a59 0%,
+            var(--bg) 55%
+          )
+          fixed;
+        color: var(--text);
+        font-family: var(--sans);
+      }
+      main {
+        max-width: 1100px;
+        margin: 28px auto;
+        padding: 0 18px 70px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+      }
+      .sub {
+        color: var(--muted);
+        margin: 0 0 18px;
+        line-height: 1.45;
+      }
+      .card {
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.06),
+          rgba(255, 255, 255, 0.03)
+        );
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 16px;
+        margin-top: 14px;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+      }
+      .field {
+        min-width: 220px;
+        flex: 1 1 260px;
+      }
+      .field.small {
+        min-width: 170px;
+        flex: 0 1 210px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input,
+      select {
+        width: 100%;
+        min-height: 40px;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--text);
+        outline: none;
+      }
+      .btn {
+        border: 1px solid var(--line);
+        background: var(--btn);
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 700;
+        min-height: 40px;
+      }
+      .btn.primary {
+        background: var(--btnActive);
+      }
+      .btn.ghost {
+        background: transparent;
+      }
+      .btn.danger {
+        background: rgba(217, 83, 79, 0.18);
+        border-color: rgba(217, 83, 79, 0.45);
+      }
+      .btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .toggle {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .toggle .btn[aria-pressed='true'] {
+        background: var(--btnActive);
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        font-size: 12px;
+        background: rgba(0, 0, 0, 0.18);
+        white-space: nowrap;
+      }
+      .pill.ok {
+        border-color: rgba(47, 158, 68, 0.55);
+        background: rgba(47, 158, 68, 0.18);
+      }
+      .pill.warn {
+        border-color: rgba(240, 140, 0, 0.55);
+        background: rgba(240, 140, 0, 0.18);
+      }
+      .pill.bad {
+        border-color: rgba(217, 83, 79, 0.55);
+        background: rgba(217, 83, 79, 0.18);
+      }
+      .kbd {
+        font-family: var(--mono);
+        font-size: 12px;
+        padding: 2px 6px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--text);
+      }
+      .help {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.45;
+        margin-top: 8px;
+      }
+      .hidden {
+        display: none !important;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        overflow: hidden;
+        border-radius: 12px;
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        font-size: 12px;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      tr:hover td {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .fav {
+        font-weight: 800;
+      }
+      .fav.gold {
+        color: #ffd43b;
+      }
+      .fav.silver {
+        color: #ced4da;
+      }
+      .mono {
+        font-family: var(--mono);
+      }
+      .right {
+        margin-left: auto;
+      }
+      .hr {
+        height: 1px;
+        background: var(--line);
+        margin: 12px 0;
+      }
+      .err {
+        color: #ffd2d2;
+      }
+      /* modal */
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        z-index: 50;
+      }
+      .backdrop.show {
+        display: flex;
+      }
+      .modal {
+        width: min(560px, 100%);
+        background: rgba(15, 22, 44, 0.98);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        padding: 16px;
+      }
+      .modal header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .modal header h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .span2 {
+        grid-column: 1 / span 2;
+      }
+    </style>
+    <script type="module">
+      import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+      window.connect = (url, anonKey) => createClient(url, anonKey);
+    </script>
+    <!-- 
+    <!- Load Supabase JS (try jsDelivr then unpkg) ->
+    <script>
+      (function () {
+        function load(src) {
+          return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+        load('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2')
+          .catch(() => load('https://unpkg.com/@supabase/supabase-js@2'))
+          .catch(() =>
+            console.warn(
+              'Could not load Supabase JS from CDN. Check network policy.'
+            )
+          );
+      })();
+    </script> -->
+  </head>
+  <body>
+    <main>
+      <h1>Facilitator Dashboard</h1>
+      <p class="sub">
+        View is public (after you add anon SELECT policies). Editor mode
+        requires allowlisted login.
+      </p>
+
+      <div class="card">
+        <div class="row">
+          <div class="field">
+            <label>Supabase Project URL</label>
+            <input
+              id="sbUrl"
+              type="text"
+              placeholder="https://xxxx.supabase.co"
+            />
+          </div>
+          <div class="field">
+            <label>Supabase Anon (public) Key</label>
+            <input id="sbKey" type="text" placeholder="eyJhbGciOi..." />
+          </div>
+          <div class="field.small">
+            <label>&nbsp;</label>
+            <button id="btnConnect" class="btn primary" type="button">
+              Connect
+            </button>
+          </div>
+          <div class="field.small">
+            <label>&nbsp;</label>
+            <span id="connPill" class="pill">Not connected</span>
+          </div>
+        </div>
+        <div class="help" id="connHelp">
+          Tip: we save URL/key in your browser (<span class="kbd"
+            >localStorage</span
+          >) so you don’t have to paste again after refresh.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div class="field small">
+            <label>Delivery</label>
+            <div class="toggle">
+              <button id="btnF2F" class="btn" type="button" aria-pressed="true">
+                F2F
+              </button>
+              <button
+                id="btnVirtual"
+                class="btn"
+                type="button"
+                aria-pressed="false"
+              >
+                Virtual
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Course</label>
+            <select id="courseDropdown" disabled></select>
+          </div>
+
+          <div class="field small" id="locWrap">
+            <label>State (F2F only)</label>
+            <select id="locationDropdown" disabled></select>
+          </div>
+
+          <div class="field small">
+            <label>&nbsp;</label>
+            <button id="btnShow" class="btn primary" type="button" disabled>
+              Show list
+            </button>
+          </div>
+
+          <div class="field small">
+            <label>Editor mode</label>
+            <button
+              id="btnEditor"
+              class="btn"
+              type="button"
+              aria-pressed="false"
+              disabled
+            >
+              Off
+            </button>
+          </div>
+        </div>
+
+        <div class="help" id="dataHelp">
+          Connect to load courses and facilitators.
+        </div>
+
+        <div id="results"></div>
+      </div>
+
+      <!-- Editor login modal -->
+      <div class="backdrop" id="editorBackdrop" aria-hidden="true">
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="editorTitle"
+        >
+          <header>
+            <h2 id="editorTitle">Editor login</h2>
+            <div class="right">
+              <button class="btn ghost" id="btnCloseEditor" type="button">
+                Close
+              </button>
+            </div>
+          </header>
+
+          <div class="help">
+            Sign in with email + password (no magic link). You only get Editor
+            mode if your email is in the <span class="kbd">editors</span> table.
+          </div>
+
+          <div class="grid" style="margin-top: 12px">
+            <div class="span2">
+              <label>Email</label>
+              <input type="text" id="edEmail" placeholder="name@company.com" />
+            </div>
+            <div class="span2">
+              <label>Password</label>
+              <input type="password" id="edPass" placeholder="••••••••" />
+            </div>
+            <div
+              class="span2"
+              style="display: flex; justify-content: flex-end; gap: 10px"
+            >
+              <button class="btn" id="btnEditorLogout" type="button">
+                Logout
+              </button>
+              <button class="btn primary" id="btnEditorLogin" type="button">
+                Sign in
+              </button>
+            </div>
+          </div>
+
+          <div class="help" id="editorMsg" style="margin-top: 10px"></div>
+        </div>
+      </div>
+
+      <script>
+        /* =======================
+           State + helpers
+        ======================= */
+        let supabase = null;
+        let mode = 'F2F';
+        let editorMode = false;
+        let isEditor = false;
+        let lastRows = [];
+
+        const QUAL_ALLOWED = new Set([
+          'YES',
+          'Yes',
+          'yes',
+          'Q',
+          'q',
+          'PD',
+          'pd',
+          'Pd',
+          'PD(1)',
+          'PD(2)',
+          'PD(3)',
+          'PD(4)',
+          'PD(5)',
+          'PD( 1 )',
+          'PD( 2 )',
+          'PD( 3 )',
+          'PD( 4 )',
+          'PD( 5 )',
+        ]);
+
+        function el(id) {
+          return document.getElementById(id);
+        }
+        function norm(s) {
+          return (s ?? '').toString().trim();
+        }
+
+        function setPill(kind, text) {
+          const p = el('connPill');
+          p.classList.remove('ok', 'warn', 'bad');
+          if (kind) p.classList.add(kind);
+          p.textContent = text;
+        }
+
+        // Persist connection details locally
+        const LS_URL = 'aim_sb_url';
+        const LS_KEY = 'aim_sb_anon';
+
+        function saveConn() {
+          try {
+            localStorage.setItem(LS_URL, norm(el('sbUrl').value));
+            localStorage.setItem(LS_KEY, norm(el('sbKey').value));
+          } catch (e) {}
+        }
+
+        function loadConn() {
+          try {
+            const u = localStorage.getItem(LS_URL) || '';
+            const k = localStorage.getItem(LS_KEY) || '';
+            if (u && !el('sbUrl').value) el('sbUrl').value = u;
+            if (k && !el('sbKey').value) el('sbKey').value = k;
+          } catch (e) {}
+        }
+
+        function favBadge(qv) {
+          const v = norm(qv).toUpperCase().replaceAll(' ', '');
+          if (v === 'PD(1)') return '<span class="fav gold">★ Gold</span>';
+          const m = v.match(/^PD\((\d+)\)$/);
+          if (m && parseInt(m[1], 10) >= 2)
+            return '<span class="fav silver">★ Silver</span>';
+          if (v === 'PD') return '<span class="fav">Qualified</span>';
+          return '';
+        }
+
+        function satisfactionFor(row) {
+          const f = row.facilitator || {};
+          return mode === 'Virtual'
+            ? f.satisfaction_virtual
+            : f.satisfaction_f2f;
+        }
+
+        async function checkIsEditor() {
+          try {
+            const { data, error } = await supabase.rpc('is_editor');
+            if (error) return false;
+            return !!data;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        /* =======================
+           Connect + load selectors
+        ======================= */
+        async function loadSelectors() {
+          const { data: courses, error: cErr } = await supabase
+            .from('courses')
+            .select('id,name,delivery') // ✅ include id
+            .eq('delivery', mode)
+            .order('name');
+
+          if (cErr) throw cErr;
+
+          const { data: facs, error: fErr } = await supabase
+            .from('facilitators')
+            .select('state')
+            .order('state');
+
+          if (fErr) throw fErr;
+
+          const states = [
+            ...new Set((facs || []).map((r) => norm(r.state)).filter(Boolean)),
+          ].sort((a, b) => a.localeCompare(b));
+
+          const cd = el('courseDropdown');
+          cd.innerHTML = '';
+          (courses || []).forEach((r) => {
+            const opt = document.createElement('option');
+            opt.value = r.id; // ✅ value = id
+            opt.textContent = r.name; // ✅ label = name
+            cd.appendChild(opt);
+          });
+
+          const ld = el('locationDropdown');
+          ld.innerHTML = '';
+          states.forEach((st) => {
+            const opt = document.createElement('option');
+            opt.value = st;
+            opt.textContent = st;
+            ld.appendChild(opt);
+          });
+
+          el('courseDropdown').disabled = false;
+          el('locationDropdown').disabled = mode === 'Virtual';
+          el('btnShow').disabled = false;
+          el('btnEditor').disabled = false;
+          el('dataHelp').textContent =
+            'Connected. You can view and filter immediately. Click Editor mode to edit.';
+        }
+
+        el('btnConnect').onclick = async () => {
+          const url = norm(el('sbUrl').value);
+          const key = norm(el('sbKey').value);
+
+          if (!url || !key) {
+            setPill('bad', 'Missing URL/key');
+            el('connHelp').innerHTML =
+              "<span class='err'>Paste Project URL and anon public key from Supabase → Project Settings → API.</span>";
+            return;
+          }
+          if (url.includes(' ') || key.includes(' ')) {
+            setPill('bad', 'Whitespace detected');
+            el('connHelp').innerHTML =
+              "<span class='err'>Remove spaces/line breaks. Re-copy from Supabase.</span>";
+            return;
+          }
+          if (typeof window.connect !== 'function') {
+            setPill('bad', 'Supabase module not loaded');
+            el('connHelp').innerHTML =
+              "<span class='err'>Supabase module didn’t load. Check /main.js is present and @supabase/supabase-js is installed.</span>";
+            return;
+          }
+
+          try {
+            saveConn();
+            supabase = window.connect(url, key);
+            setPill('ok', 'Connected');
+            el('connHelp').textContent =
+              'Connected. Loading courses + locations…';
+            await loadSelectors();
+          } catch (e) {
+            console.error(e);
+            setPill('bad', 'Connect failed');
+            el('connHelp').innerHTML =
+              "<span class='err'>Connect failed: " +
+              (e?.message || e) +
+              '</span>';
+          }
+        };
+
+        /* =======================
+           Toggle mode
+        ======================= */
+        el('btnF2F').onclick = async () => {
+          mode = 'F2F';
+          el('btnF2F').setAttribute('aria-pressed', 'true');
+          el('btnVirtual').setAttribute('aria-pressed', 'false');
+          el('locWrap').classList.remove('hidden');
+          if (supabase) await loadSelectors();
+        };
+
+        el('btnVirtual').onclick = async () => {
+          mode = 'Virtual';
+          el('btnVirtual').setAttribute('aria-pressed', 'true');
+          el('btnF2F').setAttribute('aria-pressed', 'false');
+          el('locWrap').classList.add('hidden');
+          if (supabase) await loadSelectors();
+        };
+
+        /* =======================
+           Render
+        ======================= */
+        function render(rows) {
+          lastRows = rows || [];
+
+          // ✅ show course NAME, not the UUID value
+          const courseName =
+            el('courseDropdown').selectedOptions?.[0]?.textContent ?? '';
+          const loc = norm(el('locationDropdown').value);
+
+          let html = `<div class="hr"></div>
+            <div class="row" style="align-items:center;">
+              <span class="pill">Course: <span class="mono">${escapeHtml(
+                courseName
+              )}</span></span>
+              <span class="pill">Delivery: <span class="mono">${escapeHtml(
+                mode
+              )}</span></span>
+              ${
+                mode === 'F2F'
+                  ? `<span class="pill">State: <span class="mono">${escapeHtml(
+                      loc
+                    )}</span></span>`
+                  : ''
+              }
+              <span class="pill ${editorMode ? 'ok' : ''}">Editor: ${
+            editorMode ? 'On' : 'Off'
+          }</span>
+            </div>`;
+
+          if (!rows.length) {
+            el('results').innerHTML =
+              html + `<p class="help">No facilitators found.</p>`;
+            return;
+          }
+
+          // Sort: favourites first, then satisfaction desc, then name
+          rows.sort((a, b) => {
+            const ra = rankQual(a.qualified_value);
+            const rb = rankQual(b.qualified_value);
+            if (rb !== ra) return rb - ra;
+
+            const sa = parseFloat(satisfactionFor(a) || '-1');
+            const sb = parseFloat(satisfactionFor(b) || '-1');
+            if (sb !== sa) return sb - sa;
+
+            const na = (
+              (a.facilitator?.last || '') +
+              ' ' +
+              (a.facilitator?.first || '')
+            ).toLowerCase();
+            const nb = (
+              (b.facilitator?.last || '') +
+              ' ' +
+              (b.facilitator?.first || '')
+            ).toLowerCase();
+            return na.localeCompare(nb);
+          });
+
+          html += `<table>
+            <thead>
+              <tr>
+                <th>Facilitator</th>
+                <th>City</th>
+                <th>State</th>
+                <th>Satisfaction</th>
+                <th>Qualification</th>
+                <th>Favourite</th>
+                <th>Certification</th>
+                <th>Notes</th>
+                ${editorMode ? '<th>Actions</th>' : ''}
+              </tr>
+            </thead>
+            <tbody>`;
+
+          for (const r of rows) {
+            const f = r.facilitator || {};
+            const sat = satisfactionFor(r);
+
+            html += `<tr data-qid="${escapeAttr(r.id)}" data-fid="${escapeAttr(
+              f.id
+            )}">
+              <td><b>${escapeHtml(f.first || '')} ${escapeHtml(
+              f.last || ''
+            )}</b></td>
+              <td>${escapeHtml(f.city || '')}</td>
+              <td>${escapeHtml(f.state || '')}</td>
+              <td>${escapeHtml(sat ?? '')}</td>
+              <td class="mono">${escapeHtml(r.qualified_value || '')}</td>
+              <td>${favBadge(r.qualified_value)}</td>
+              <td>${
+                editorMode
+                  ? `<input data-field="certification" value="${escapeAttr(
+                      f.certification || ''
+                    )}" />`
+                  : escapeHtml(f.certification || '')
+              }</td>
+              <td>${
+                editorMode
+                  ? `<input data-field="notes" value="${escapeAttr(
+                      f.notes || ''
+                    )}" />`
+                  : escapeHtml(f.notes || '')
+              }</td>
+              ${
+                editorMode
+                  ? `<td>
+                      <button class="btn" data-act="save">Save</button>
+                      <button class="btn danger" data-act="del">Delete</button>
+                    </td>`
+                  : ''
+              }
+            </tr>`;
+          }
+
+          html += `</tbody></table>`;
+          el('results').innerHTML = html;
+
+          if (editorMode) {
+            el('results')
+              .querySelectorAll('button[data-act]')
+              .forEach((btn) => {
+                btn.onclick = async () => {
+                  const act = btn.getAttribute('data-act');
+                  const tr = btn.closest('tr');
+                  const qid = tr.getAttribute('data-qid');
+                  const fid = tr.getAttribute('data-fid');
+                  if (act === 'save') await saveRow(tr, fid);
+                  if (act === 'del') await deleteQual(qid);
+                };
+              });
+          }
+        }
+
+        /* =======================
+           Query (ID-based to avoid duplicates)
+        ======================= */
+        el('btnShow').onclick = async () => {
+          if (!supabase) {
+            alert('Connect first.');
+            return;
+          }
+
+          const courseId = el('courseDropdown').value; // ✅ id
+          const loc = norm(el('locationDropdown').value);
+
+          // If F2F, fetch facilitator IDs in the selected state first
+          let facilitatorIds = null;
+          if (mode === 'F2F' && loc) {
+            const { data: facs, error: fErr } = await supabase
+              .from('facilitators')
+              .select('id')
+              .eq('state', loc);
+
+            if (fErr) {
+              console.error(fErr);
+              el(
+                'results'
+              ).innerHTML = `<p class="help err">Query failed: ${escapeHtml(
+                fErr.message
+              )}</p>`;
+              return;
+            }
+
+            facilitatorIds = (facs || []).map((r) => r.id);
+            if (facilitatorIds.length === 0) {
+              render([]);
+              return;
+            }
+          }
+
+          let q = supabase
+            .from('qualifications')
+            .select(
+              'id, qualified_value, facilitator:facilitators(id,first,last,state,city,satisfaction_virtual,satisfaction_f2f,notes,certification), course_id, facilitator_id'
+            )
+            .eq('course_id', courseId);
+
+          if (facilitatorIds) {
+            q = q.in('facilitator_id', facilitatorIds);
+          }
+
+          const { data, error } = await q;
+          if (error) {
+            console.error(error);
+            el(
+              'results'
+            ).innerHTML = `<p class="help err">Query failed: ${escapeHtml(
+              error.message
+            )}</p>`;
+            return;
+          }
+
+          // apply qualification filter
+          const rows = (data || []).filter((r) =>
+            QUAL_ALLOWED.has(norm(r.qualified_value))
+          );
+
+          // extra safety: de-dupe by (facilitator_id, course_id)
+          const seen = new Set();
+          const deduped = [];
+          for (const r of rows) {
+            const key = `${r.facilitator_id}::${r.course_id}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            deduped.push(r);
+          }
+
+          render(deduped);
+        };
+
+        function rankQual(qv) {
+          const v = norm(qv).toUpperCase().replaceAll(' ', '');
+          if (v === 'PD(1)') return 50;
+          const m = v.match(/^PD\((\d+)\)$/);
+          if (m) {
+            const n = parseInt(m[1], 10);
+            if (n >= 2 && n <= 5) return 40;
+            return 35;
+          }
+          if (v === 'PD') return 30;
+          if (v === 'Q') return 20;
+          if (v === 'YES') return 10;
+          return 0;
+        }
+
+        async function saveRow(tr, fid) {
+          const cert =
+            tr.querySelector('input[data-field="certification"]')?.value ?? '';
+          const notes =
+            tr.querySelector('input[data-field="notes"]')?.value ?? '';
+
+          const { error } = await supabase
+            .from('facilitators')
+            .update({ certification: cert, notes })
+            .eq('id', fid);
+
+          if (error) {
+            alert('Save failed: ' + error.message);
+            return;
+          }
+          alert('Saved.');
+        }
+
+        async function deleteQual(qid) {
+          if (!confirm('Delete this qualification row?')) return;
+          const { error } = await supabase
+            .from('qualifications')
+            .delete()
+            .eq('id', qid);
+          if (error) {
+            alert('Delete failed: ' + error.message);
+            return;
+          }
+          el('btnShow').click();
+        }
+
+        /* =======================
+           Editor mode (popup login)
+        ======================= */
+        const backdrop = el('editorBackdrop');
+
+        function openEditor() {
+          backdrop.classList.add('show');
+          backdrop.setAttribute('aria-hidden', 'false');
+          el('editorMsg').textContent = '';
+        }
+        function closeEditor() {
+          backdrop.classList.remove('show');
+          backdrop.setAttribute('aria-hidden', 'true');
+        }
+
+        el('btnCloseEditor').onclick = closeEditor;
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) closeEditor();
+        });
+
+        el('btnEditor').onclick = async () => {
+          if (!supabase) return alert('Connect first.');
+          if (!editorMode) openEditor();
+          else {
+            editorMode = false;
+            el('btnEditor').setAttribute('aria-pressed', 'false');
+            el('btnEditor').textContent = 'Off';
+            render(lastRows);
+          }
+        };
+
+        el('btnEditorLogin').onclick = async () => {
+          if (!supabase) return;
+
+          const email = norm(el('edEmail').value);
+          const password = (el('edPass').value || '').toString();
+
+          if (!email || !email.includes('@'))
+            return (el('editorMsg').textContent = 'Enter a valid email.');
+          if (!password)
+            return (el('editorMsg').textContent = 'Enter your password.');
+
+          el('editorMsg').textContent = 'Signing in…';
+          const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (error) {
+            el('editorMsg').textContent = 'Login failed: ' + error.message;
+            return;
+          }
+
+          isEditor = await checkIsEditor();
+          if (!isEditor) {
+            el('editorMsg').textContent =
+              'Signed in, but you are not allowlisted for editing.';
+            return;
+          }
+
+          editorMode = true;
+          el('btnEditor').setAttribute('aria-pressed', 'true');
+          el('btnEditor').textContent = 'On';
+          closeEditor();
+          render(lastRows);
+        };
+
+        el('btnEditorLogout').onclick = async () => {
+          if (!supabase) return;
+          await supabase.auth.signOut();
+          isEditor = false;
+          editorMode = false;
+          el('btnEditor').setAttribute('aria-pressed', 'false');
+          el('btnEditor').textContent = 'Off';
+          el('editorMsg').textContent = 'Logged out.';
+          render(lastRows);
+        };
+
+        /* =======================
+           Simple escaping
+        ======================= */
+        function escapeHtml(str) {
+          return (str ?? '')
+            .toString()
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+        }
+        function escapeAttr(str) {
+          return escapeHtml(str).replaceAll('\n', ' ').replaceAll('\r', ' ');
+        }
+
+        // Init
+        loadConn();
+      </script>
+    </main>
+  </body>
+</html>
