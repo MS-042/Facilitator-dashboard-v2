@@ -188,6 +188,15 @@
       tr:hover td {
         background: rgba(255, 255, 255, 0.03);
       }
+      .fav {
+        font-weight: 800;
+      }
+      .fav.gold {
+        color: #ffd43b;
+      }
+      .fav.silver {
+        color: #ced4da;
+      }
       .mono {
         font-family: var(--mono);
       }
@@ -202,7 +211,6 @@
       .err {
         color: #ffd2d2;
       }
-
       .star {
         font-size: 18px;
         cursor: pointer;
@@ -261,19 +269,41 @@
         grid-column: 1 / span 2;
       }
     </style>
-
     <script type="module">
       import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
       window.connect = (url, anonKey) => createClient(url, anonKey);
     </script>
+    <!-- 
+    <!- Load Supabase JS (try jsDelivr then unpkg) ->
+    <script>
+      (function () {
+        function load(src) {
+          return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+        load('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2')
+          .catch(() => load('https://unpkg.com/@supabase/supabase-js@2'))
+          .catch(() =>
+            console.warn(
+              'Could not load Supabase JS from CDN. Check network policy.'
+            )
+          );
+      })();
+    </script> -->
   </head>
-
   <body>
     <main>
       <h1>Facilitator Dashboard</h1>
       <p class="sub">
         Enter the provided project url and key, then select "Connect" to
         continue. Editing requires an allowed account.
+        <br>
+        Note: To add a facilitator, please ask Matt until the feature has been finalised.
       </p>
 
       <div class="card">
@@ -356,14 +386,6 @@
               Off
             </button>
           </div>
-
-          <!-- ✅ NEW: Add facilitator button (enabled only when editor mode is ON) -->
-          <div class="field small">
-            <label>&nbsp;</label>
-            <button id="btnAddFac" class="btn" type="button" disabled>
-              Add facilitator
-            </button>
-          </div>
         </div>
 
         <div class="help" id="dataHelp">
@@ -418,106 +440,6 @@
           </div>
 
           <div class="help" id="editorMsg" style="margin-top: 10px"></div>
-        </div>
-      </div>
-
-      <!-- ✅ NEW: Add facilitator modal -->
-      <div class="backdrop" id="addBackdrop" aria-hidden="true">
-        <div
-          class="modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="addTitle"
-        >
-          <header>
-            <h2 id="addTitle">Add facilitator</h2>
-            <div class="right">
-              <button class="btn ghost" id="btnCloseAdd" type="button">
-                Close
-              </button>
-            </div>
-          </header>
-
-          <div class="help">
-            Required: First name, Last name, State. Then pick courses + delivery
-            scope.
-          </div>
-
-          <div class="grid" style="margin-top: 12px">
-            <div>
-              <label>First name *</label>
-              <input id="addFirst" type="text" />
-            </div>
-            <div>
-              <label>Last name *</label>
-              <input id="addLast" type="text" />
-            </div>
-
-            <div>
-              <label>State *</label>
-              <select id="addState"></select>
-            </div>
-            <div>
-              <label>City</label>
-              <input id="addCity" type="text" />
-            </div>
-
-            <div>
-              <label>Satisfaction (Virtual)</label>
-              <input id="addSatV" type="text" />
-            </div>
-            <div>
-              <label>Satisfaction (F2F)</label>
-              <input id="addSatF" type="text" />
-            </div>
-
-            <div class="span2">
-              <label>Certification</label>
-              <input id="addCert" type="text" />
-            </div>
-
-            <div class="span2">
-              <label>Notes</label>
-              <input id="addNotes" type="text" />
-            </div>
-
-            <div class="span2">
-              <label>Delivery scope *</label>
-              <select id="addDeliveryScope">
-                <option value="F2F">F2F only</option>
-                <option value="Virtual">Virtual only</option>
-                <option value="Both" selected>Both</option>
-              </select>
-            </div>
-
-            <div class="span2">
-              <label>Assign courses *</label>
-              <select
-                id="addCourses"
-                multiple
-                size="10"
-                style="min-height: 220px"
-              ></select>
-              <div class="help">
-                Tip: hold Ctrl/⌘ to select multiple. Courses are listed as Name
-                (Delivery).
-              </div>
-            </div>
-
-            <div
-              class="span2"
-              style="display: flex; justify-content: flex-end; gap: 10px"
-            >
-              <button class="btn" id="btnAddCancel" type="button">
-                Cancel
-              </button>
-              <button class="btn primary" id="btnAddSave" type="button">
-                Create
-              </button>
-            </div>
-          </div>
-
-          <div class="help" id="addMsg" style="margin-top: 10px"></div>
         </div>
       </div>
 
@@ -596,6 +518,16 @@
           } catch (e) {}
         }
 
+        function favBadge(qv) {
+          const v = norm(qv).toUpperCase().replaceAll(' ', '');
+          if (v === 'PD(1)') return '<span class="fav gold">★ Gold</span>';
+          const m = v.match(/^PD\((\d+)\)$/);
+          if (m && parseInt(m[1], 10) >= 2)
+            return '<span class="fav silver">★ Silver</span>';
+          if (v === 'PD') return '<span class="fav">Qualified</span>';
+          return '';
+        }
+
         function satisfactionFor(row) {
           const f = row.facilitator || {};
           return mode === 'Virtual'
@@ -613,35 +545,37 @@
           }
         }
 
-        // Star ⇄ qualified_value mapping:
-        // blank = PD
-        // silver = PD(4)
-        // gold = PD(5)
         function starStateFromQualifiedValue(qv) {
           const v = norm(qv).toUpperCase().replaceAll(' ', '');
           if (v === 'PD(5)') return 'gold';
           if (v === 'PD(4)') return 'silver';
-          return 'blank';
+          return 'blank'; // treat everything else as PD (no star)
         }
+
         function qualifiedValueFromStarState(state) {
           if (state === 'gold') return 'PD(5)';
           if (state === 'silver') return 'PD(4)';
           return 'PD';
         }
+
         function nextStarState(state) {
+          // blank -> silver -> gold -> blank
           if (state === 'blank') return 'silver';
           if (state === 'silver') return 'gold';
           return 'blank';
         }
+
         function starHtml(state, clickable) {
+          // Use simple stars to avoid extra icon libs
+          // clickable blank shows an outlined star; otherwise blank shows nothing in view mode
           if (state === 'blank') {
             return clickable
               ? `<span class="star outline" title="Toggle favourite">☆</span>`
               : '';
           }
           if (state === 'silver')
-            return `<span class="star silver" title="Favourite">★</span>`;
-          return `<span class="star gold" title="Favourite">★</span>`;
+            return `<span class="star silver" title="Silver favourite">★</span>`;
+          return `<span class="star gold" title="Gold favourite">★</span>`;
         }
 
         /* =======================
@@ -650,7 +584,7 @@
         async function loadSelectors() {
           const { data: courses, error: cErr } = await supabase
             .from('courses')
-            .select('id,name,delivery')
+            .select('id,name,delivery') // ✅ include id
             .eq('delivery', mode)
             .order('name');
 
@@ -671,8 +605,8 @@
           cd.innerHTML = '';
           (courses || []).forEach((r) => {
             const opt = document.createElement('option');
-            opt.value = r.id; // value = course id
-            opt.textContent = r.name;
+            opt.value = r.id; // ✅ value = id
+            opt.textContent = r.name; // ✅ label = name
             cd.appendChild(opt);
           });
 
@@ -712,7 +646,7 @@
           if (typeof window.connect !== 'function') {
             setPill('bad', 'Supabase module not loaded');
             el('connHelp').innerHTML =
-              "<span class='err'>Supabase module didn’t load. Check your module import (esm.sh) is reachable.</span>";
+              "<span class='err'>Supabase module didn’t load. Check /main.js is present and @supabase/supabase-js is installed.</span>";
             return;
           }
 
@@ -763,24 +697,24 @@
           const loc = norm(el('locationDropdown').value);
 
           let html = `<div class="hr"></div>
-            <div class="row" style="align-items:center;">
-              <span class="pill">Course: <span class="mono">${escapeHtml(
-                courseName
-              )}</span></span>
-              <span class="pill">Delivery: <span class="mono">${escapeHtml(
-                mode
-              )}</span></span>
-              ${
-                mode === 'F2F'
-                  ? `<span class="pill">State: <span class="mono">${escapeHtml(
-                      loc
-                    )}</span></span>`
-                  : ''
-              }
-              <span class="pill ${editorMode ? 'ok' : ''}">Editor: ${
+    <div class="row" style="align-items:center;">
+      <span class="pill">Course: <span class="mono">${escapeHtml(
+        courseName
+      )}</span></span>
+      <span class="pill">Delivery: <span class="mono">${escapeHtml(
+        mode
+      )}</span></span>
+      ${
+        mode === 'F2F'
+          ? `<span class="pill">State: <span class="mono">${escapeHtml(
+              loc
+            )}</span></span>`
+          : ''
+      }
+      <span class="pill ${editorMode ? 'ok' : ''}">Editor: ${
             editorMode ? 'On' : 'Off'
           }</span>
-            </div>`;
+    </div>`;
 
           if (!rows.length) {
             el('results').innerHTML =
@@ -810,25 +744,24 @@
             return na.localeCompare(nb);
           });
 
-          // state options for edit-mode dropdown
+          html += `<table>
+    <thead>
+      <tr>
+        <th>Facilitator</th>
+        <th class="starCell">★</th>
+        <th>City</th>
+        <th>State</th>
+        <th>Satisfaction</th>
+        <th>Certification</th>
+        <th>Notes</th>
+        ${editorMode ? '<th>Actions</th>' : ''}
+      </tr>
+    </thead>
+    <tbody>`;
+
           const stateOptions = [...el('locationDropdown').options]
             .map((o) => o.value)
             .filter(Boolean);
-
-          html += `<table>
-            <thead>
-              <tr>
-                <th>Facilitator</th>
-                <th class="starCell">★</th>
-                <th>City</th>
-                <th>State</th>
-                <th>Satisfaction</th>
-                <th>Certification</th>
-                <th>Notes</th>
-                ${editorMode ? '<th>Actions</th>' : ''}
-              </tr>
-            </thead>
-            <tbody>`;
 
           for (const r of rows) {
             const f = r.facilitator || {};
@@ -836,104 +769,100 @@
             const starState = starStateFromQualifiedValue(r.qualified_value);
 
             html += `<tr data-qid="${escapeAttr(r.id)}"
-                         data-fid="${escapeAttr(f.id)}"
-                         data-star="${escapeAttr(starState)}">
-              <td>
-                ${
-                  editorMode
-                    ? `<input data-field="first" value="${escapeAttr(
-                        f.first || ''
-                      )}" style="width:140px" />
-                       <input data-field="last" value="${escapeAttr(
-                         f.last || ''
-                       )}" style="width:160px" />`
-                    : `<b>${escapeHtml(f.first || '')} ${escapeHtml(
-                        f.last || ''
-                      )}</b>`
-                }
-              </td>
+                data-fid="${escapeAttr(f.id)}"
+                data-star="${escapeAttr(starState)}">
+      <td>
+        ${
+          editorMode
+            ? `<input data-field="first" value="${escapeAttr(
+                f.first || ''
+              )}" style="width:140px" />
+             <input data-field="last" value="${escapeAttr(
+               f.last || ''
+             )}" style="width:160px" />`
+            : `<b>${escapeHtml(f.first || '')} ${escapeHtml(f.last || '')}</b>`
+        }
+      </td>
 
-              <td class="starCell">
-                ${
-                  editorMode
-                    ? `<span class="starClick" role="button" tabindex="0">${starHtml(
-                        starState,
-                        true
-                      )}</span>`
-                    : starHtml(starState, false)
-                }
-              </td>
+      <td class="starCell">
+        ${
+          editorMode
+            ? `<span class="starClick" role="button" tabindex="0">${starHtml(
+                starState,
+                true
+              )}</span>`
+            : starHtml(starState, false)
+        }
+      </td>
 
-              <td>
-                ${
-                  editorMode
-                    ? `<input data-field="city" value="${escapeAttr(
-                        f.city || ''
-                      )}" />`
-                    : escapeHtml(f.city || '')
-                }
-              </td>
+      <td>
+        ${
+          editorMode
+            ? `<input data-field="city" value="${escapeAttr(f.city || '')}" />`
+            : escapeHtml(f.city || '')
+        }
+      </td>
 
-              <td>
-                ${
-                  editorMode
-                    ? `<select data-field="state">
-                        ${stateOptions
-                          .map(
-                            (st) =>
-                              `<option value="${escapeAttr(st)}" ${
-                                st === f.state ? 'selected' : ''
-                              }>${escapeHtml(st)}</option>`
-                          )
-                          .join('')}
-                       </select>`
-                    : escapeHtml(f.state || '')
-                }
-              </td>
+      <td>
+        ${
+          editorMode
+            ? `<select data-field="state">
+              ${stateOptions
+                .map(
+                  (st) =>
+                    `<option value="${escapeAttr(st)}" ${
+                      st === f.state ? 'selected' : ''
+                    }>${escapeHtml(st)}</option>`
+                )
+                .join('')}
+            </select>`
+            : escapeHtml(f.state || '')
+        }
+      </td>
 
-              <td>
-                ${
-                  editorMode
-                    ? mode === 'Virtual'
-                      ? `<input data-field="satisfaction_virtual" value="${escapeAttr(
-                          f.satisfaction_virtual ?? ''
-                        )}" />`
-                      : `<input data-field="satisfaction_f2f" value="${escapeAttr(
-                          f.satisfaction_f2f ?? ''
-                        )}" />`
-                    : escapeHtml(sat ?? '')
-                }
-              </td>
+      <td>
+        ${
+          editorMode
+            ? mode === 'Virtual'
+              ? `<input data-field="satisfaction_virtual" value="${escapeAttr(
+                  f.satisfaction_virtual ?? ''
+                )}" />`
+              : `<input data-field="satisfaction_f2f" value="${escapeAttr(
+                  f.satisfaction_f2f ?? ''
+                )}" />`
+            : escapeHtml(sat ?? '')
+        }
+      </td>
 
-              <td>
-                ${
-                  editorMode
-                    ? `<input data-field="certification" value="${escapeAttr(
-                        f.certification || ''
-                      )}" />`
-                    : escapeHtml(f.certification || '')
-                }
-              </td>
+      <td>
+        ${
+          editorMode
+            ? `<input data-field="certification" value="${escapeAttr(
+                f.certification || ''
+              )}" />`
+            : escapeHtml(f.certification || '')
+        }
+      </td>
 
-              <td>
-                ${
-                  editorMode
-                    ? `<input data-field="notes" value="${escapeAttr(
-                        f.notes || ''
-                      )}" />`
-                    : escapeHtml(f.notes || '')
-                }
-              </td>
+      <td>
+        ${
+          editorMode
+            ? `<input data-field="notes" value="${escapeAttr(
+                f.notes || ''
+              )}" />`
+            : escapeHtml(f.notes || '')
+        }
+      </td>
 
-              ${
-                editorMode
-                  ? `<td>
-                      <button class="btn" data-act="save">Save</button>
-                      <button class="btn danger" data-act="del">Delete</button>
-                    </td>`
-                  : ''
-              }
-            </tr>`;
+      ${
+        editorMode
+          ? `<td>
+        <button class="btn" data-act="save">Save</button>
+        <button class="btn danger" data-act="del">Delete</button>
+      </td>`
+          : ''
+      }
+    </tr>`;
           }
 
           html += `</tbody></table>`;
@@ -989,16 +918,18 @@
             return;
           }
 
+          // Update UI immediately
           tr.setAttribute('data-star', next);
           const cell = tr.querySelector('.starClick');
           if (cell) cell.innerHTML = starHtml(next, true);
 
+          // Also update the in-memory lastRows so a re-render keeps it
           const row = lastRows.find((r) => r.id === qid);
           if (row) row.qualified_value = newVal;
         }
 
         /* =======================
-           Query (ID-based)
+           Query (ID-based to avoid duplicates)
         ======================= */
         el('btnShow').onclick = async () => {
           if (!supabase) {
@@ -1006,10 +937,10 @@
             return;
           }
 
-          const courseId = el('courseDropdown').value;
+          const courseId = el('courseDropdown').value; // ✅ id
           const loc = norm(el('locationDropdown').value);
 
-          // F2F: pre-filter facilitator IDs by state
+          // If F2F, fetch facilitator IDs in the selected state first
           let facilitatorIds = null;
           if (mode === 'F2F' && loc) {
             const { data: facs, error: fErr } = await supabase
@@ -1041,7 +972,9 @@
             )
             .eq('course_id', courseId);
 
-          if (facilitatorIds) q = q.in('facilitator_id', facilitatorIds);
+          if (facilitatorIds) {
+            q = q.in('facilitator_id', facilitatorIds);
+          }
 
           const { data, error } = await q;
           if (error) {
@@ -1054,11 +987,12 @@
             return;
           }
 
+          // apply qualification filter
           const rows = (data || []).filter((r) =>
             QUAL_ALLOWED.has(norm(r.qualified_value))
           );
 
-          // de-dupe by (facilitator_id, course_id)
+          // extra safety: de-dupe by (facilitator_id, course_id)
           const seen = new Set();
           const deduped = [];
           for (const r of rows) {
@@ -1109,9 +1043,12 @@
 
           const patch = { first, last, city, state, certification, notes };
 
-          if (mode === 'Virtual')
+          // Satisfaction: update the correct column depending on mode
+          if (mode === 'Virtual') {
             patch.satisfaction_virtual = get('satisfaction_virtual');
-          else patch.satisfaction_f2f = get('satisfaction_f2f');
+          } else {
+            patch.satisfaction_f2f = get('satisfaction_f2f');
+          }
 
           const { error } = await supabase
             .from('facilitators')
@@ -1141,21 +1078,21 @@
         /* =======================
            Editor mode (popup login)
         ======================= */
-        const editorBackdrop = el('editorBackdrop');
+        const backdrop = el('editorBackdrop');
 
         function openEditor() {
-          editorBackdrop.classList.add('show');
-          editorBackdrop.setAttribute('aria-hidden', 'false');
+          backdrop.classList.add('show');
+          backdrop.setAttribute('aria-hidden', 'false');
           el('editorMsg').textContent = '';
         }
         function closeEditor() {
-          editorBackdrop.classList.remove('show');
-          editorBackdrop.setAttribute('aria-hidden', 'true');
+          backdrop.classList.remove('show');
+          backdrop.setAttribute('aria-hidden', 'true');
         }
 
         el('btnCloseEditor').onclick = closeEditor;
-        editorBackdrop.addEventListener('click', (e) => {
-          if (e.target === editorBackdrop) closeEditor();
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) closeEditor();
         });
 
         el('btnEditor').onclick = async () => {
@@ -1165,7 +1102,6 @@
             editorMode = false;
             el('btnEditor').setAttribute('aria-pressed', 'false');
             el('btnEditor').textContent = 'Off';
-            el('btnAddFac').disabled = true;
             render(lastRows);
           }
         };
@@ -1202,7 +1138,6 @@
           editorMode = true;
           el('btnEditor').setAttribute('aria-pressed', 'true');
           el('btnEditor').textContent = 'On';
-          el('btnAddFac').disabled = false;
           closeEditor();
           render(lastRows);
         };
@@ -1214,191 +1149,8 @@
           editorMode = false;
           el('btnEditor').setAttribute('aria-pressed', 'false');
           el('btnEditor').textContent = 'Off';
-          el('btnAddFac').disabled = true;
           el('editorMsg').textContent = 'Logged out.';
           render(lastRows);
-        };
-
-        /* =======================
-           Add facilitator modal
-        ======================= */
-        const addBackdrop = el('addBackdrop');
-
-        function openAddModal() {
-          addBackdrop.classList.add('show');
-          addBackdrop.setAttribute('aria-hidden', 'false');
-          el('addMsg').textContent = '';
-
-          // clear fields
-          el('addFirst').value = '';
-          el('addLast').value = '';
-          el('addCity').value = '';
-          el('addSatV').value = '';
-          el('addSatF').value = '';
-          el('addCert').value = '';
-          el('addNotes').value = '';
-          el('addDeliveryScope').value = 'Both';
-
-          populateAddStateOptions();
-          populateAddCourseOptions();
-        }
-
-        function closeAddModal() {
-          addBackdrop.classList.remove('show');
-          addBackdrop.setAttribute('aria-hidden', 'true');
-        }
-
-        el('btnCloseAdd').onclick = closeAddModal;
-        el('btnAddCancel').onclick = closeAddModal;
-        addBackdrop.addEventListener('click', (e) => {
-          if (e.target === addBackdrop) closeAddModal();
-        });
-
-        el('btnAddFac').onclick = () => {
-          if (!editorMode) return;
-          openAddModal();
-        };
-
-        function populateAddStateOptions() {
-          const stSel = el('addState');
-          const states = [...el('locationDropdown').options]
-            .map((o) => o.value)
-            .filter(Boolean);
-          stSel.innerHTML = '';
-          states.forEach((st) => {
-            const opt = document.createElement('option');
-            opt.value = st;
-            opt.textContent = st;
-            stSel.appendChild(opt);
-          });
-        }
-
-        async function populateAddCourseOptions() {
-          const sel = el('addCourses');
-          sel.innerHTML = '';
-          el('addMsg').textContent = 'Loading courses…';
-
-          const { data, error } = await supabase
-            .from('courses')
-            .select('id,name,delivery')
-            .in('delivery', ['F2F', 'Virtual'])
-            .order('name');
-
-          if (error) {
-            el('addMsg').textContent =
-              'Failed to load courses: ' + error.message;
-            return;
-          }
-
-          for (const c of data || []) {
-            const opt = document.createElement('option');
-            opt.value = c.id;
-            opt.textContent = `${c.name} (${c.delivery})`;
-            opt.dataset.delivery = c.delivery;
-            sel.appendChild(opt);
-          }
-
-          el('addMsg').textContent = '';
-        }
-
-        el('btnAddSave').onclick = async () => {
-          if (!supabase || !editorMode) return;
-
-          const first = norm(el('addFirst').value);
-          const last = norm(el('addLast').value);
-          const state = norm(el('addState').value);
-
-          if (!first || !last || !state) {
-            el('addMsg').textContent =
-              'Please fill First name, Last name, and State.';
-            return;
-          }
-
-          const city = norm(el('addCity').value) || null;
-          const certification = norm(el('addCert').value) || null;
-          const notes = norm(el('addNotes').value) || null;
-
-          const satV = norm(el('addSatV').value);
-          const satF = norm(el('addSatF').value);
-
-          const satisfaction_virtual = satV === '' ? null : satV;
-          const satisfaction_f2f = satF === '' ? null : satF;
-
-          const scope = el('addDeliveryScope').value; // F2F | Virtual | Both
-
-          const selected = [...el('addCourses').selectedOptions].map((o) => ({
-            id: o.value,
-            delivery: o.dataset.delivery,
-          }));
-
-          if (selected.length === 0) {
-            el('addMsg').textContent = 'Select at least one course.';
-            return;
-          }
-
-          const allowedDeliveries =
-            scope === 'Both' ? new Set(['F2F', 'Virtual']) : new Set([scope]);
-
-          const courseIds = selected
-            .filter((c) => allowedDeliveries.has(c.delivery))
-            .map((c) => c.id);
-
-          if (courseIds.length === 0) {
-            el('addMsg').textContent =
-              'Your delivery scope excludes the courses you selected. Change scope or select different courses.';
-            return;
-          }
-
-          el('addMsg').textContent = 'Creating facilitator…';
-
-          const { data: facData, error: facErr } = await supabase
-            .from('facilitators')
-            .insert([
-              {
-                first,
-                last,
-                state,
-                city,
-                satisfaction_virtual,
-                satisfaction_f2f,
-                certification,
-                notes,
-              },
-            ])
-            .select('id')
-            .single();
-
-          if (facErr) {
-            el('addMsg').textContent =
-              'Failed to create facilitator: ' + facErr.message;
-            return;
-          }
-
-          const facilitatorId = facData.id;
-
-          el('addMsg').textContent = 'Assigning courses…';
-
-          const rows = courseIds.map((courseId) => ({
-            facilitator_id: facilitatorId,
-            course_id: courseId,
-            qualified_value: 'PD',
-          }));
-
-          const { error: qErr } = await supabase
-            .from('qualifications')
-            .upsert(rows, { onConflict: 'facilitator_id,course_id' });
-
-          if (qErr) {
-            el('addMsg').textContent =
-              'Facilitator created, but failed to assign courses: ' +
-              qErr.message;
-            return;
-          }
-
-          closeAddModal();
-          try {
-            el('btnShow').click();
-          } catch (e) {}
         };
 
         /* =======================
